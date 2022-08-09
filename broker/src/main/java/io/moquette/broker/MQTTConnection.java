@@ -42,7 +42,7 @@ import static io.netty.handler.codec.mqtt.MqttConnectReturnCode.*;
 import static io.netty.handler.codec.mqtt.MqttMessageIdVariableHeader.from;
 import static io.netty.handler.codec.mqtt.MqttQoS.*;
 
-final class MQTTConnection {
+public final class MQTTConnection {
 
     private static final Logger LOG = LoggerFactory.getLogger(MQTTConnection.class);
 
@@ -138,7 +138,7 @@ final class MQTTConnection {
         });
     }
 
-    Future<PostOffice.RouteResult> processConnect(MqttConnectMessage msg) {
+    public Future<PostOffice.RouteResult> processConnect(MqttConnectMessage msg) {
         MqttConnectPayload payload = msg.payload();
         String clientId = payload.clientIdentifier();
         final String username = payload.userName();
@@ -298,7 +298,7 @@ final class MQTTConnection {
         return true;
     }
 
-    void handleConnectionLost() {
+    public void handleConnectionLost() {
         final String clientID = NettyUtils.clientID(channel);
         if (clientID == null || clientID.isEmpty()) {
             return;
@@ -333,15 +333,15 @@ final class MQTTConnection {
         LOG.trace("dispatch disconnection: userName={}", userName);
     }
 
-    boolean isConnected() {
+    public boolean isConnected() {
         return connected;
     }
 
-    void dropConnection() {
+    public void dropConnection() {
         channel.close().addListener(FIRE_EXCEPTION_ON_FAILURE);
     }
 
-    Future<PostOffice.RouteResult> processDisconnect(MqttMessage msg) {
+    public Future<PostOffice.RouteResult> processDisconnect(MqttMessage msg) {
         final String clientID = NettyUtils.clientID(channel);
         LOG.trace("Start DISCONNECT");
         if (!connected) {
@@ -364,7 +364,7 @@ final class MQTTConnection {
         });
     }
 
-    Future<PostOffice.RouteResult> processSubscribe(MqttSubscribeMessage msg) {
+    public Future<PostOffice.RouteResult> processSubscribe(MqttSubscribeMessage msg) {
         final String clientID = NettyUtils.clientID(channel);
         if (!connected) {
             LOG.warn("SUBSCRIBE received on already closed connection");
@@ -379,7 +379,7 @@ final class MQTTConnection {
         });
     }
 
-    void sendSubAckMessage(int messageID, MqttSubAckMessage ackMessage) {
+    public void sendSubAckMessage(int messageID, MqttSubAckMessage ackMessage) {
         LOG.trace("Sending SUBACK response messageId: {}", messageID);
         channel.writeAndFlush(ackMessage).addListener(FIRE_EXCEPTION_ON_FAILURE);
     }
@@ -398,7 +398,7 @@ final class MQTTConnection {
         });
     }
 
-    void sendUnsubAckMessage(List<String> topics, String clientID, int messageID) {
+    public void sendUnsubAckMessage(List<String> topics, String clientID, int messageID) {
         MqttFixedHeader fixedHeader = new MqttFixedHeader(MqttMessageType.UNSUBACK, false, AT_MOST_ONCE,
             false, 0);
         MqttUnsubAckMessage ackMessage = new MqttUnsubAckMessage(fixedHeader, from(messageID));
@@ -408,7 +408,7 @@ final class MQTTConnection {
         LOG.trace("Client unsubscribed from topics <{}>", topics);
     }
 
-    Future<? extends Object> processPublish(MqttPublishMessage msg) {
+    public Future<? extends Object> processPublish(MqttPublishMessage msg) {
         final MqttQoS qos = msg.fixedHeader().qosLevel();
         final String username = NettyUtils.userName(channel);
         final String topicName = msg.variableHeader().topicName();
@@ -456,7 +456,7 @@ final class MQTTConnection {
         }
     }
 
-    void sendPubRec(int messageID) {
+    public void sendPubRec(int messageID) {
         LOG.trace("sendPubRec invoked, messageID: {}", messageID);
         MqttFixedHeader fixedHeader = new MqttFixedHeader(MqttMessageType.PUBREC, false, AT_MOST_ONCE,
             false, 0);
@@ -477,7 +477,7 @@ final class MQTTConnection {
         sendPubCompMessage(messageID);
     }
 
-    void sendPublish(MqttPublishMessage publishMsg) {
+    public void sendPublish(MqttPublishMessage publishMsg) {
         final int packetId = publishMsg.variableHeader().packetId();
         final String topicName = publishMsg.variableHeader().topicName();
         final String clientId = getClientId();
@@ -491,7 +491,7 @@ final class MQTTConnection {
         sendIfWritableElseDrop(publishMsg);
     }
 
-    void sendIfWritableElseDrop(MqttMessage msg) {
+    public void sendIfWritableElseDrop(MqttMessage msg) {
         if (LOG.isDebugEnabled()) {
             LOG.debug("OUT {}", msg.fixedHeader().messageType());
         }
@@ -521,7 +521,7 @@ final class MQTTConnection {
         }
     }
 
-    void sendPubAck(int messageID) {
+    public void sendPubAck(int messageID) {
         LOG.trace("sendPubAck for messageID: {}", messageID);
         MqttFixedHeader fixedHeader = new MqttFixedHeader(MqttMessageType.PUBACK, false, AT_MOST_ONCE,
                                                   false, 0);
@@ -536,11 +536,11 @@ final class MQTTConnection {
         sendIfWritableElseDrop(pubCompMessage);
     }
 
-    String getClientId() {
+    public String getClientId() {
         return NettyUtils.clientID(channel);
     }
 
-    String getUsername() {
+    public String getUsername() {
         return NettyUtils.userName(channel);
     }
 
@@ -551,7 +551,7 @@ final class MQTTConnection {
     }
 
     // TODO move this method in Session
-    void sendPublishQos0(Topic topic, MqttQoS qos, ByteBuf payload, boolean retained) {
+    public void sendPublishQos0(Topic topic, MqttQoS qos, ByteBuf payload, boolean retained) {
         MqttPublishMessage publishMsg = createPublishMessage(topic.toString(), qos, payload, 0, retained);
         sendPublish(publishMsg);
     }
@@ -585,7 +585,7 @@ final class MQTTConnection {
         bindedSession.resendInflightNotAcked();
     }
 
-    int nextPacketId() {
+    public int nextPacketId() {
         return lastPacketId.updateAndGet(v -> v == 65535 ? 1 : v + 1);
     }
 
@@ -594,7 +594,7 @@ final class MQTTConnection {
         return "MQTTConnection{channel=" + channel + ", connected=" + connected + '}';
     }
 
-    InetSocketAddress remoteAddress() {
+    public InetSocketAddress remoteAddress() {
         return (InetSocketAddress) channel.remoteAddress();
     }
 

@@ -41,7 +41,7 @@ import static io.moquette.broker.Utils.messageId;
 import static io.netty.handler.codec.mqtt.MqttMessageIdVariableHeader.from;
 import static io.netty.handler.codec.mqtt.MqttQoS.*;
 
-class PostOffice {
+public class PostOffice {
 
     /**
      * Maps the failed packetID per clientId (id client source, id_packet) -> [id client target]
@@ -161,18 +161,18 @@ class PostOffice {
 
     private static final Set<String> NO_FILTER = new HashSet<>();
 
-    private final Authorizator authorizator;
-    private final ISubscriptionsDirectory subscriptions;
-    private final IRetainedRepository retainedRepository;
-    private SessionRegistry sessionRegistry;
-    private BrokerInterceptor interceptor;
+    protected final Authorizator authorizator;
+    protected final ISubscriptionsDirectory subscriptions;
+    protected final IRetainedRepository retainedRepository;
+    protected SessionRegistry sessionRegistry;
+    protected BrokerInterceptor interceptor;
 
-    private final Thread[] sessionExecutors;
-    private final BlockingQueue<FutureTask<String>>[] sessionQueues;
-    private final int eventLoops = Runtime.getRuntime().availableProcessors();
-    private final FailedPublishCollection failedPublishes = new FailedPublishCollection();
+    protected final Thread[] sessionExecutors;
+    protected final BlockingQueue<FutureTask<String>>[] sessionQueues;
+    protected final int eventLoops = Runtime.getRuntime().availableProcessors();
+    protected final FailedPublishCollection failedPublishes = new FailedPublishCollection();
 
-    PostOffice(ISubscriptionsDirectory subscriptions, IRetainedRepository retainedRepository,
+    public PostOffice(ISubscriptionsDirectory subscriptions, IRetainedRepository retainedRepository,
                SessionRegistry sessionRegistry, BrokerInterceptor interceptor, Authorizator authorizator, int sessionQueueSize) {
         this.authorizator = authorizator;
         this.subscriptions = subscriptions;
@@ -322,7 +322,7 @@ class PostOffice {
         });
     }
 
-    CompletableFuture<RoutingResults> receivedPublishQos1(MQTTConnection connection, Topic topic, String username, int messageID,
+    public CompletableFuture<RoutingResults> receivedPublishQos1(MQTTConnection connection, Topic topic, String username, int messageID,
                                                 MqttPublishMessage msg) {
         // verify if topic can be written
         topic.getTokens();
@@ -349,7 +349,7 @@ class PostOffice {
         return publishFuture.whenComplete((RoutingResults routings, Throwable err) -> {
             if (routings.isAllSuccess()) {
                 // QoS1 message was enqueued successfully to every event loop
-                connection.sendPubAck(messageID);
+                onReceivedPublishQos1Succeed(connection, messageID, topic, msg);
                 manageRetain(topic, msg);
                 interceptor.notifyTopicPublished(msg, clientId, username);
             } else {
@@ -361,6 +361,10 @@ class PostOffice {
             // cleanup success resends from the failed publishes cache
             failedPublishes.removeAll(messageID, clientId, routings.successedRoutings);
         });
+    }
+
+    public void onReceivedPublishQos1Succeed(MQTTConnection connection, int messageID, Topic topic, MqttPublishMessage msg) {
+        connection.sendPubAck(messageID);
     }
 
     private void manageRetain(Topic topic, MqttPublishMessage msg) {

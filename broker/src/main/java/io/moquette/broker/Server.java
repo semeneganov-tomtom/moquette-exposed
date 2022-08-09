@@ -135,11 +135,16 @@ public class Server {
      */
     public void startServer(IConfig config, List<? extends InterceptHandler> handlers) throws IOException {
         LOG.debug("Starting moquette integration using IConfig instance and intercept handlers");
-        startServer(config, handlers, null, null, null);
+        startServer(config, handlers, null);
+    }
+
+    public void startServer(IConfig config, List<? extends InterceptHandler> handlers, IPostOfficeFactory postOfficeFactory) {
+        LOG.debug("Starting moquette integration using IConfig instance and intercept handlers");
+        startServer(config, handlers, null, null, null, postOfficeFactory);
     }
 
     public void startServer(IConfig config, List<? extends InterceptHandler> handlers, ISslContextCreator sslCtxCreator,
-                            IAuthenticator authenticator, IAuthorizatorPolicy authorizatorPolicy) {
+                            IAuthenticator authenticator, IAuthorizatorPolicy authorizatorPolicy, IPostOfficeFactory postOfficeFactory) {
         final long start = System.currentTimeMillis();
         if (handlers == null) {
             handlers = Collections.emptyList();
@@ -184,8 +189,13 @@ public class Server {
         final Authorizator authorizator = new Authorizator(authorizatorPolicy);
         sessions = new SessionRegistry(subscriptions, queueRepository, authorizator);
         final int sessionQueueSize = config.intProp(BrokerConstants.SESSION_QUEUE_SIZE, 1024);
-        dispatcher = new PostOffice(subscriptions, retainedRepository, sessions, interceptor, authorizator,
-                                    sessionQueueSize);
+        if (postOfficeFactory == null) {
+            dispatcher = new PostOffice(subscriptions, retainedRepository, sessions, interceptor, authorizator,
+                sessionQueueSize);
+        } else {
+            dispatcher = postOfficeFactory.create(subscriptions, retainedRepository, sessions, interceptor,
+                authorizator, sessionQueueSize);
+        }
         final BrokerConfiguration brokerConfig = new BrokerConfiguration(config);
         MQTTConnectionFactory connectionFactory = new MQTTConnectionFactory(brokerConfig, authenticator, sessions,
                                                                             dispatcher);

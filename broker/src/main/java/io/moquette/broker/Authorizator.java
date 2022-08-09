@@ -29,7 +29,7 @@ import java.util.List;
 import static io.moquette.broker.Utils.messageId;
 import static io.netty.handler.codec.mqtt.MqttQoS.FAILURE;
 
-final class Authorizator {
+public final class Authorizator {
 
     private static final Logger LOG = LoggerFactory.getLogger(Authorizator.class);
 
